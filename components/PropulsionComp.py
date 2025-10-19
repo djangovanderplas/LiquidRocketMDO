@@ -40,6 +40,8 @@ class PropulsionComp(om.ExplicitComponent):
         self.add_output('prop_mass', val=0.0, units='kg')  # [kg]
         self.add_output('prop_ox', val=0.0, units='kg')  # [kg]
         self.add_output('prop_fuel', val=0.0, units='kg')
+        self.add_output('P_exit', val=0.0, units='bar')
+        self.add_output('V_exit', val=0.0, units='m/s')
 
         # We'll use FD or CS totals at the model level (RocketCEA is a black box).
         self.declare_partials(of='*', wrt='*', method='fd')
@@ -59,6 +61,9 @@ class PropulsionComp(om.ExplicitComponent):
         SL_Isp = CEA.estimate_Ambient_Isp(Pc=Pc, MR=MR, eps=eps, Pamb=Pamb, frozen=0, frozenAtThroat=0)[0]
         Cf = CEA.get_PambCf(Pc=Pc, MR=MR, eps=eps, Pamb=Pamb)[1]
         cstar = CEA.get_Cstar(Pc=Pc, MR=MR)
+        Pc_over_Pexit = CEA.get_PcOvPe(Pc=Pc, MR=MR, eps=eps, frozen=0, frozenAtThroat=0)
+
+        P_exit = Pc / Pc_over_Pexit
 
         # Nozzle Geometry
         At = np.pi * (0.5 * d_throat) ** 2
@@ -80,6 +85,10 @@ class PropulsionComp(om.ExplicitComponent):
         prop_fuel = mdot_fuel * burn_time
         prop_ox = mdot_ox * burn_time
 
+        # Calculate real exit velocity
+        V_eq = SL_Isp * 9.81
+        V_exit = V_eq - (P_exit-Pamb) * 1e5 * Ae / mdot_total
+
         # Set outputs
         outputs['SL_Isp'] = SL_Isp
         outputs['Cf'] = Cf
@@ -93,3 +102,30 @@ class PropulsionComp(om.ExplicitComponent):
         outputs['prop_mass'] = prop_mass
         outputs['prop_ox'] = prop_ox
         outputs['prop_fuel'] = prop_fuel
+        outputs['P_exit'] = P_exit
+        outputs['V_exit'] = V_exit
+
+
+def thrust_from_ambient_isp(Pc_bar: float, MR: float, eps: float, Pamb_bar: float, At_m2: float):
+    """
+    Compute thrust and ambient Isp at a given ambient pressure using RocketCEA.
+
+    Returns:
+        thrust_N (float), IspAmb_s (float), mode (str), cstar_mps (float)
+    Notes:
+        mdot = Pc*At / c*  (Pc in Pa, At in m^2, c* in m/s)
+        T    = mdot * g0 * IspAmb
+    """
+    # Ambient Isp + operation mode (Under, Over, Separated)
+    IspAmb_s, mode = CEA.estimate_Ambient_Isp(
+        Pc=Pc_bar, MR=MR, eps=eps, Pamb=Pamb_bar, frozen=0, frozenAtThroat=0
+    )
+
+    # c* at these Pc/MR (does not depend on ambient)
+    cstar_mps = CEA.get_Cstar(Pc=Pc_bar, MR=MR)
+
+    # mdot from Pc and At
+    mdot = (Pc_bar * 1.0e5 * At_m2) / cstar_mps
+
+    thrust_N = IspAmb_s * 9.81 * mdot
+    return thrust_N, IspAmb_s, mode, cstar_mps

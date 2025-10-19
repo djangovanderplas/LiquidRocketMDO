@@ -29,7 +29,9 @@ def build_problem():
     ivc.add_output('area_ref', 0.012, units='m**2')  # e.g., ~0.125 m dia body => A=πr^2
     ivc.add_output('h0', 0.0, units='m')
     ivc.add_output('v0', 0.0, units='m/s')
-    ivc.add_output('dt', 0.001, units='s')
+    ivc.add_output('dt', 0.05, units='s')
+    ivc.add_output('h_table_max', 20000.0, units='m')  # 50 km table
+    ivc.add_output('n_table', 80.0)  # ~80 samples (tweak for speed/accuracy)
 
     model.add_subsystem('ivc', ivc, promotes=['*'])
 
@@ -47,12 +49,14 @@ def build_problem():
         'traj',
         TrajectoryComp(),
         promotes_inputs=[
-            # from PropulsionComp
-            'thrust', 'mdot_total', 'prop_mass', 'burn_time',
-            # user-specified / vehicle properties
-            'dry_mass', 'Cd', 'area_ref', 'h0', 'v0', 'dt'
+            # From PropulsionComp + IVC
+            'At', 'Ae',  # geometry from PropulsionComp
+            'Pc', 'MR', 'eps',  # from IVC directly
+            'prop_mass', 'burn_time',
+            'dry_mass', 'Cd', 'area_ref', 'h0', 'v0', 'dt',
+            'h_table_max', 'n_table'  # Isp table controls
         ],
-        promotes_outputs=['*']  # apogee, burnout_alt, etc., promoted to top level
+        promotes_outputs=['*'],
     )
 
     # Global derivatives
