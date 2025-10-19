@@ -20,26 +20,26 @@ CEA = CEA_Obj(
 class PropulsionComp(om.ExplicitComponent):
     def setup(self):
         # Inputs
-        self.add_input('Pc', val=40.0)  # chamber pressure [bar]
+        self.add_input('Pc', val=40.0, units='bar')  # chamber pressure [bar]
         self.add_input('eps', val=5.0)  # expansion ratio [-]
         self.add_input('MR', val=3.0)  # O/F mass ratio [-]
-        self.add_input('throat_diam', val=0.02)  # throat diameter [m]
-        self.add_input('Pamb', val=1.01325)  # ambient pressure [bar]
-        self.add_input('burn_time', val=10.0)  # [s]
+        self.add_input('throat_diam', val=0.02, units='m')  # throat diameter [m]
+        self.add_input('Pamb', val=1.01325, units='bar')  # ambient pressure [bar]
+        self.add_input('burn_time', val=10.0, units='s')  # [s]
 
         # Outputs
-        self.add_output('SL_Isp', val=0.0)  # [s]
+        self.add_output('SL_Isp', val=0.0, units='s')  # [s]
         self.add_output('Cf', val=0.0)  # [-]
-        self.add_output('cstar', val=0.0)  # [m/s]
-        self.add_output('At', val=0.0)  # [m^2]
-        self.add_output('Ae', val=0.0)  # [m^2]
-        self.add_output('thrust', val=0.0)  # [N]
-        self.add_output('mdot_total', val=0.0)  # [kg/s]
-        self.add_output('mdot_ox', val=0.0)  # [kg/s]
-        self.add_output('mdot_fuel', val=0.0)  # [kg/s]
-        self.add_output('prop_mass', val=0.0)  # [kg]
-        self.add_output('prop_ox', val=0.0)  # [kg]
-        self.add_output('prop_fuel', val=0.0)
+        self.add_output('cstar', val=0.0, units='m/s')  # [m/s]
+        self.add_output('At', val=0.0, units='m**2')  # [m^2]
+        self.add_output('Ae', val=0.0, units='m**2')  # [m^2]
+        self.add_output('thrust', val=0.0, units='N')  # [N]
+        self.add_output('mdot_total', val=0.0, units='kg/s')  # [kg/s]
+        self.add_output('mdot_ox', val=0.0, units='kg/s')  # [kg/s]
+        self.add_output('mdot_fuel', val=0.0, units='kg/s')  # [kg/s]
+        self.add_output('prop_mass', val=0.0, units='kg')  # [kg]
+        self.add_output('prop_ox', val=0.0, units='kg')  # [kg]
+        self.add_output('prop_fuel', val=0.0, units='kg')
 
         # We'll use FD or CS totals at the model level (RocketCEA is a black box).
         self.declare_partials(of='*', wrt='*', method='fd')
