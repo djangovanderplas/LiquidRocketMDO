@@ -116,6 +116,7 @@ class TrajectoryComp(om.ExplicitComponent):
         self.add_output('max_q', val=0.0, units='Pa')
         self.add_output('min_static_margin', val=0.0)
         self.add_output('max_static_margin', val=0.0)
+        self.add_output('starting_mass', val=0.0, units='kg')
 
         self.count = 1
 
@@ -131,12 +132,16 @@ class TrajectoryComp(om.ExplicitComponent):
                                                mdot_fuel=inputs['mdot_fuel'][0],
                                                Ae=inputs['Ae'][0],
                                                d_rocket=inputs['d_rocket'][0])
+        # engine.all_info()
 
         # Define Rocket
         rocket = _define_rocket(d_rocket=inputs['d_rocket'][0],
                                 engine_length=engine_length,
                                 engine=engine,
                                 m_dry=inputs['m_dry'][0],)
+
+        # rocket.draw()
+        # rocket.all_info()
 
         # Define Environment
         env = Environment(latitude=32.990254,
@@ -149,7 +154,10 @@ class TrajectoryComp(om.ExplicitComponent):
                         environment=env,
                         rail_length=10.5,
                         inclination=84,
-                        heading=0)
+                        heading=0,
+                        terminate_on_apogee=True)
+
+        # flight.all_info()
 
         print(f"thrust: {inputs['thrust'][0]}, apogee: {flight.apogee}")
 
@@ -162,3 +170,4 @@ class TrajectoryComp(om.ExplicitComponent):
         outputs['max_q'] = flight.max_dynamic_pressure
         outputs['min_static_margin'] = flight.stability_margin.min
         outputs['max_static_margin'] = flight.stability_margin.max
+        outputs['starting_mass'] = rocket.total_mass.max
