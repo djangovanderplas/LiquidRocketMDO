@@ -1,8 +1,6 @@
 import openmdao.api as om
-from rocketpy.simulation import flight
 
-from components.PropulsionComp import PropulsionComp
-from components.TrajectoryComp import TrajectoryComp
+from liquidrocketmdo.components import PropulsionComp, TrajectoryComp
 
 def build_problem():
     # ------------------------------
