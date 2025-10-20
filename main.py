@@ -1,4 +1,6 @@
 import openmdao.api as om
+from rocketpy.simulation import flight
+
 from components.PropulsionComp import PropulsionComp
 from components.TrajectoryComp import TrajectoryComp
 
@@ -17,21 +19,15 @@ def build_problem():
 
     # Propulsion / nozzle
     ivc.add_output('Pc', 40.0, units='bar') # bar
-    ivc.add_output('eps', 10.0) # -
+    ivc.add_output('eps', 7.0) # -
     ivc.add_output('MR',  2) # -
     ivc.add_output('throat_diam', 0.02, units='m') # m
     ivc.add_output('Pamb', 1.01325, units='bar') # bar
     ivc.add_output('burn_time', 10.0, units='s') # s
 
     # Trajectory
-    ivc.add_output('dry_mass', 12.0, units='kg')
-    ivc.add_output('Cd', 0.6)
-    ivc.add_output('area_ref', 0.012, units='m**2')  # e.g., ~0.125 m dia body => A=πr^2
-    ivc.add_output('h0', 0.0, units='m')
-    ivc.add_output('v0', 0.0, units='m/s')
-    ivc.add_output('dt', 0.05, units='s')
-    ivc.add_output('h_table_max', 20000.0, units='m')  # 50 km table
-    ivc.add_output('n_table', 80.0)  # ~80 samples (tweak for speed/accuracy)
+    ivc.add_output('d_rocket', 0.1, units='m')
+    ivc.add_output('m_dry', 10, units='kg')
 
     model.add_subsystem('ivc', ivc, promotes=['*'])
 
@@ -48,14 +44,7 @@ def build_problem():
     model.add_subsystem(
         'traj',
         TrajectoryComp(),
-        promotes_inputs=[
-            # From PropulsionComp + IVC
-            'At', 'Ae',  # geometry from PropulsionComp
-            'Pc', 'MR', 'eps',  # from IVC directly
-            'prop_mass', 'burn_time',
-            'dry_mass', 'Cd', 'area_ref', 'h0', 'v0', 'dt',
-            'h_table_max', 'n_table'  # Isp table controls
-        ],
+        promotes_inputs=['*'],
         promotes_outputs=['*'],
     )
 
@@ -98,10 +87,10 @@ def print_parameters(prob):
     print("------ Trajectory Outputs ------")
     print("Apogee [m]        :", g('apogee'))
     print("t_apogee [s]      :", g('t_apogee'))
-    print("burnout_alt [m]   :", g('burnout_alt'))
-    print("burnout_vel [m/s] :", g('burnout_vel'))
+    print("v_rail_exit [m/s] :", g('v_rail_exit'))
     print("max_q [Pa]        :", g('max_q'))
-    print("t_max_q [s]       :", g('t_max_q'))
+    print("Min SM [-]        :", g('min_static_margin'))
+    print("Max SM [-]        :", g('max_static_margin'))
 
 if __name__ == "__main__":
     prob = build_problem()
@@ -109,18 +98,23 @@ if __name__ == "__main__":
 
     # Define Objective
     model.add_objective('apogee', scaler=-1.0)
-    model.add_design_var('eps', lower=5, upper=30)
+    model.add_design_var('eps', lower=5, upper=8)
     model.add_design_var('MR', lower=1, upper=10)
 
 
     # Driver (set BEFORE setup)
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options['optimizer'] = 'SLSQP'
-    prob.driver.options['tol'] = 1e-9
+    prob.driver.options['tol'] = 1e-6
     prob.driver.options['maxiter'] = 20
+    prob.driver.options['disp'] = True
+    prob.set_solver_print(2)
+
+    model.approx_totals(method='fd', form='central', step_calc='rel', step=1e-2)
 
     # Setup, then execute
     prob.setup()
+
     prob.run_model()
 
     print("Baseline:")

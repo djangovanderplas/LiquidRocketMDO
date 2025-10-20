@@ -43,8 +43,7 @@ class PropulsionComp(om.ExplicitComponent):
         self.add_output('P_exit', val=0.0, units='bar')
         self.add_output('V_exit', val=0.0, units='m/s')
 
-        # We'll use FD or CS totals at the model level (RocketCEA is a black box).
-        self.declare_partials(of='*', wrt='*', method='fd')
+        self.declare_partials(of='*', wrt='*', method='cs')
 
 
     def compute(self, inputs, outputs):
