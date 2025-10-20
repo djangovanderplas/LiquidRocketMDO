@@ -19,15 +19,15 @@ def build_problem():
 
     # Propulsion / nozzle
     ivc.add_output('Pc', 40.0, units='bar') # bar
-    ivc.add_output('eps', 7.0) # -
-    ivc.add_output('MR',  2) # -
-    ivc.add_output('throat_diam', 0.02, units='m') # m
+    ivc.add_output('eps', 6.4) # -
+    ivc.add_output('MR',  5.6) # -
+    ivc.add_output('throat_diam', 12, units='mm') # m
     ivc.add_output('Pamb', 1.01325, units='bar') # bar
-    ivc.add_output('burn_time', 10.0, units='s') # s
+    ivc.add_output('burn_time', 12.0, units='s') # s
 
     # Trajectory
-    ivc.add_output('d_rocket', 0.1, units='m')
-    ivc.add_output('m_dry', 10, units='kg')
+    ivc.add_output('d_rocket', 85, units='mm')
+    ivc.add_output('m_dry', 5, units='kg')
 
     model.add_subsystem('ivc', ivc, promotes=['*'])
 
@@ -91,15 +91,21 @@ def print_parameters(prob):
     print("max_q [Pa]        :", g('max_q'))
     print("Min SM [-]        :", g('min_static_margin'))
     print("Max SM [-]        :", g('max_static_margin'))
+    print("Dry Mass [kg]     :", g('m_dry'))
+    print("Wet Mass [kg]     :", g('starting_mass'))
 
 if __name__ == "__main__":
     prob = build_problem()
     model = prob.model
 
     # Define Objective
-    model.add_objective('apogee', scaler=-1.0)
+    model.add_objective('starting_mass', scaler=1.0)
     model.add_design_var('eps', lower=5, upper=8)
     model.add_design_var('MR', lower=1, upper=10)
+    model.add_design_var('burn_time', lower=1, upper=20)
+
+    model.add_constraint('apogee', lower=9000)
+    model.add_constraint('v_rail_exit', lower=30)
 
 
     # Driver (set BEFORE setup)
